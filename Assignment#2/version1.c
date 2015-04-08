@@ -7,32 +7,32 @@
 #define CREATE_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 main()
 {
-    int pid, pid2;
-    int fd[2];
+    pid_t pid1, pid2;
+    int fd1[2];
     int fd2[2];
     char *arg[4];
     char *arg2[3];
     char *arg3[3];  
     
-    /* cat /etc/passwd| grep /bin/bash$ | wc-l */
+   
     /* tail -5 /etc/passwd | grep e | sort */
-
+    /* -----process 1------|process2|prcoess3*/
     int newfd = open("YoYo.txt", CREATE_FLAGS, CREATE_MODE);
         dup2(newfd, STDOUT_FILENO);
         close(newfd);
 
-    pipe(fd); 
-    pid = fork();
+    pipe(fd1); 
+    pid1 = fork();
 
-    if (pid == 0) {//first child
+    if (pid1 == 0) { /* Child process 2 */
         
         pipe(fd2);
       
         pid2=fork();
     
-        if (pid2 == 0) {
-            //i am child 2 (child of the child)
-            close (fd[1]), close (fd[0]);
+        if (pid2 == 0) { /* grandchild process 1*/
+            
+            close (fd1[1]), close (fd1[0]);
             
             
             dup2 (fd2[1],1);
@@ -45,35 +45,26 @@ main()
             perror("execl second child");
 
             wait(NULL) != pid2;
-        }else {
-            //i am child 1
-            
-
+        }else { /* executing child process 2 */
+        
             dup2(fd2[0],0);
             close (fd2[0]), close (fd2[1]);
             
-            
-            
-            dup2(fd[1],1);
-            close (fd[1]), close (fd[0]);
+            dup2(fd1[1],1);
+            close (fd1[1]), close (fd1[0]);
             arg2[0] = "grep";
             arg2[1] = "e";
             arg2[2] = NULL;
             execvp("grep", arg2);
             perror("execl first child");
-            wait(NULL) != pid;
+            wait(NULL) != pid1;
         }
     }
-    else {
-        //i 'm the father
+    else { /* executing parent process 3 */
         
-        dup2(fd[0],0);
-        close (fd[0]), close (fd[1]);
-
+        dup2(fd1[0],0);
+        close (fd1[0]), close (fd1[1]);
         execl("/usr/bin/sort", "sort", "-n", NULL);
-
-        
-        //execl("cat", "/etc/passwd", NULL);
         perror("execl father");    
     }
 } 
